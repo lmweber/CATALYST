@@ -1,0 +1,101 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+### A new spillover calculation strategies to fight overcompensation
+
+In this notebook I want to explore an alternative method to calculate spillover.
+
+
+```{r}
+library(CATALYST)
+library(flowCore)
+library(dplyr)
+```
+
+```{r}
+# get single-stained control samples
+data(ss_exp)
+# specify mass channels stained for
+bc_ms <- c(139, 141:156, 158:176)
+# debarcode
+re <- assignPrelim(x=ss_exp, y=bc_ms, verbose=FALSE)
+re <- estCutoffs(x=re, verbose=FALSE)
+re <- applyCutoffs(x=re)
+```
+
+```{r}
+trimVal <- estTrim(x=re, min=0.06, max=0.10)
+```
+Using a range closer to the median is even worse:
+```{r}
+trimVal <- estTrim(x=re, min=0.45, max=0.5)
+```
+
+Using the 'classic' strategy of taking the ratio of the medians leads to overcompensation.
+Thus I want to try a new strategy to calculate the median of all ratios of single cells.
+
+This calculates the spillover from x to y as:
+
+\begin{equation}
+sm_{xy}= median(\frac{signal_y}{signal_x})
+
+\end{equation}
+
+Currently this does not account for potential background in channels.
+```{r}
+trimVal <- estTrim(x=re, min=0.4, max=0.50, strategy='experimental')
+```
+
+This looks now much more as we would expect!!
+
+Lets plot and compare the two spillover matrices:
+
+```{r, fig.height=5, fig.width=5}
+spillmat_default = computeSpillmat(re,  strategy='default')
+spillmat_experimental = computeSpillmat(re, trim=0.5, strategy='experimental')
+
+spillmats = list('default'=spillmat_default, 'exprimental'=spillmat_experimental)
+
+plotSpillmat(bc_ms=bc_ms, SM=spillmat_default)
+plotSpillmat(bc_ms, SM=spillmat_experimental)
+```
+
+Somehow this wont plot the spillmat...
+Anyways I proceed.
+
+```{r}
+data(mp_cells)
+
+comped_cells <- lapply(spillmats, function (x) compCytof(x=mp_cells, y=x))
+
+```
+
+Compare the compensation
+
+```{r}
+cf <- 5
+plotcells <- append(list('uncomp'=mp_cells), comped_cells) %>%
+  lapply(function(x) asinh(exprs(x)/cf))
+
+plot_scatter <- function(mat, x, y, main=NULL, n=64, bw=0.25, ...){
+  smoothScatter(mat[, c(x,y)], nrpoints=0, nbin=n, bandwidth=bw, main=main, ...)
+}
+
+plot_scatter_list <- function(mats, x, y, cols=NULL, ... ){
+  par(mfrow=c(1, length(mats)), pty='s')
+  if (is.null(cols)){
+    cols = colorRampPalette(rev(RColorBrewer::brewer.pal(10, "Spectral")))
+  }
+  for (nam in names(mats)){
+    plot_scatter(mats[[nam]], x, y, main=nam, colramp=cols, ...)
+  }
+  
+}
+
+plot_scatter_list(plotcells, "Er167Di",  "Er168Di")
+plot_scatter_list(plotcells, "Dy161Di","Dy163Di")
+plot_scatter_list(plotcells, "Yb172Di","Yb173Di")
+```
+

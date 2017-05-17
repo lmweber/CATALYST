@@ -46,7 +46,7 @@
 setMethod(f="estTrim", 
     signature=signature(x="dbFrame"), 
     definition=function(x, min = 0.05, max = 0.20, step = 0.01, 
-        out_path = NULL, name_ext = NULL) {
+        out_path = NULL, name_ext = NULL, strategy='default') {
         
         ids <- as.numeric(rownames(x@bc_key))
         nms <- paste(colnames(x@exprs))
@@ -59,7 +59,7 @@ setMethod(f="estTrim",
         trim_vals <- seq(min, max, step)
         df <- rss <- NULL
         for (trim in trim_vals) {
-            sm <- computeSpillmat(x=x, method="mean", trim=trim)
+            sm <- computeSpillmat(x=x, method="mean", trim=trim, strategy=strategy)
             sm <- make_symetric(sm)
             comped <- exprs(x) %*% solve(sm)
             for (id in ids) 

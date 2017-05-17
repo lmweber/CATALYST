@@ -291,7 +291,7 @@ comped_cells_t <- asinh(exprs(comped_cells)/cf)
 
 ```{r echo=FALSE, fig.width=9, fig.height=9}
 par(mfrow=c(2,2), pty="s")
-which <- c("La139Di", "Gd155Di")
+which <- par(mfrow=c(2,2), pty="s")
 #which <- c("Yb171Di", "Yb172Di")
 which <- c("Er167Di", "Er168Di")
 cols <- colorRampPalette(rev(RColorBrewer::brewer.pal(10, "Spectral")))
